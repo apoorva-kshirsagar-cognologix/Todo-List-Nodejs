@@ -41,9 +41,9 @@ jobs:
       # Build Docker image
       - name: Build Docker image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/todoList:latest .
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/todolist:latest .
 
       # Push Docker image to Docker Hub
       - name: Push Docker image
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/todoList:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/todolist:latest
