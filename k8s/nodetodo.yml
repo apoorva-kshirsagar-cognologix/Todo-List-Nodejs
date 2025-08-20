@@ -14,13 +14,15 @@ spec:
     spec:
       containers:
         - name: todolist
-          image: todo:1.0
+          image: apoorvaak/todo:1.0
           ports:
             - containerPort: 4000
           env:
             - name: mongoDbUrl
               value: mongodb://mongo:27017/todolistDb
-          imagePullPolicy: IfNotPresent
+#          imagePullPolicy: IfNotPresent
+      imagePullSecrets:
+        - name: regcred
 ---          
 apiVersion: v1
 kind: Service
@@ -32,4 +34,4 @@ spec:
   ports:
     - port: 4000
       targetPort: 4000
-  type: ClusterIP
+  type: NodePort
