@@ -20,14 +20,12 @@ jobs:
           node-version: '18'
 
       - name: Install deps
-        working-directory: app
         run: npm install
 
       - name: Run tests
         run: npm test
 
       - name: Lint
-        working-directory: app
         run: npm run lint
 
       # Login to Docker Hub
