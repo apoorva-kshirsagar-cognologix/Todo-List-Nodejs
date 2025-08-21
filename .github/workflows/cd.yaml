@@ -1,5 +1,5 @@
 name: CD
-
+# check cd flow for develop branch 
 on:
   push:
     branches:
@@ -19,7 +19,7 @@ jobs:
       - name: Set Environment
         id: set-env
         run: |
-          if [[ "${GITHUB_REF}" == refs/heads/main ]]; then
+          if [[ "${GITHUB_REF}" == refs/heads/develop ]]; then
             echo "env=dev" >> $GITHUB_OUTPUT
             echo "tag=dev-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
           elif [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
