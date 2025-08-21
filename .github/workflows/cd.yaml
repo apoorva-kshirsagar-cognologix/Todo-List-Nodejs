@@ -19,15 +19,15 @@ jobs:
       - name: Set Environment
         id: set-env
         run: |
-          if [[ "${GITHUB_REF}" == refs/heads/develop ]]; then
+          if [[ "${GITHUB_REF}" == refs/heads/main ]]; then
             echo "env=dev" >> $GITHUB_OUTPUT
             echo "tag=dev-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
           elif [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             echo "env=prod" >> $GITHUB_OUTPUT
             echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           else
-            echo "env=qa" >> $GITHUB_OUTPUT
-            echo "tag=qa-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+            echo "tag=dev-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
         shell: bash
 
       - name: Log in to DockerHub
