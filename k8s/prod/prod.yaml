@@ -52,6 +52,7 @@ spec:
 ---
 apiVersion: apps/v1
 kind: Deployment
+Replicas: 1
 metadata:
   name: todolist
   namespace: prod
@@ -77,9 +78,6 @@ spec:
             - name: mongoDbUrl
               value: mongodb://prod-mongo:27017/todolistDb_prod
           imagePullPolicy: IfNotPresent
-
-      # imagePullSecrets:
-      #   - name: regcred
 ---          
 apiVersion: v1
 kind: Service
