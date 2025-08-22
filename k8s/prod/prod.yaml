@@ -76,8 +76,10 @@ spec:
               value: prod
             - name: mongoDbUrl
               value: mongodb://prod-mongo:27017/todolistDb_prod
-      imagePullSecrets:
-        - name: regcred
+          imagePullPolicy: IfNotPresent
+
+      # imagePullSecrets:
+      #   - name: regcred
 ---          
 apiVersion: v1
 kind: Service

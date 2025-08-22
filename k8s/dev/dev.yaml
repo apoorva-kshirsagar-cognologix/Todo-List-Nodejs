@@ -76,8 +76,10 @@ spec:
               value: development
             - name: mongoDbUrl
               value: mongodb://mongo:27017/todolistDb_dev
-      imagePullSecrets:
-        - name: regcred
+          imagePullPolicy: IfNotPresent
+
+      # imagePullSecrets:
+      #   - name: regcred
 ---          
 apiVersion: v1
 kind: Service
