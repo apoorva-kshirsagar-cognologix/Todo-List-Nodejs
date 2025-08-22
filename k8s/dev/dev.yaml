@@ -68,7 +68,7 @@ spec:
     spec:
       containers:
         - name: todolist
-          image: apoorvaak/todo:1.0
+          image: todo:1.0
           ports:
             - containerPort: 4000
           env:
