@@ -5,8 +5,12 @@ on:
     branches:
       - main
       - develop
+      - feature/*
     tags:
       - 'v*.*.*'
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   deploy:
@@ -19,14 +23,14 @@ jobs:
         id: set-env
         run: |
           if [[ "${GITHUB_REF}" == refs/heads/main ]]; then
-            echo "env=dev" >> $GITHUB_OUTPUT
-            echo "tag=dev-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+            echo "env=staging" >> $GITHUB_OUTPUT
+            echo "tag=staging-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
           elif [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             echo "env=prod" >> $GITHUB_OUTPUT
             echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           else
-            echo "env=staging" >> $GITHUB_OUTPUT
-            echo "tag=staging-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+            echo "tag=dev-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
           fi
         shell: bash
 
@@ -42,6 +46,44 @@ jobs:
           echo "Building and pushing $IMAGE"
           docker build -t $IMAGE .
           docker push $IMAGE
+
+      - name: Create PR (if not exists)
+        id: create_pr
+        run: |
+          PR_URL=$(gh pr list --head ${{ github.ref_name }} --base main --json url --jq '.[0].url')
+          if [ -z "$PR_URL" ]; then
+            echo "Creating PR..."
+            gh pr create \
+              --base main \
+              --head ${{ github.ref_name }} \
+              --title "Feature: ${{ github.ref_name }}" \
+              --body "Auto-created PR for feature branch"
+          else
+            echo "PR already exists: $PR_URL"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Approve or Comment on PR
+        if: success()
+        run: |
+          gh pr review ${{ github.ref_name }} --approve --body "✅ All checks passed!"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment if tests failed
+        if: failure()
+        run: |
+          gh pr comment ${{ github.ref_name }} --body "❌ Tests failed. Please fix before merging."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge PR
+        if: success()
+        run: |
+          gh pr merge ${{ github.ref_name }} --merge --admin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Set up kubectl
         run: |
@@ -55,3 +97,7 @@ jobs:
           for f in k8s/${{ steps.set-env.outputs.env }}/*.yaml; do
             sed "s|todo:.*|$IMAGE|g" $f | kubectl apply -n ${{ steps.set-env.outputs.env }} -f -
           done
+
+      - name: Deploy to K8s
+        run: |
+          kubectl rollout status deployment -n ${{ steps.set-env.outputs.env }} todolist
