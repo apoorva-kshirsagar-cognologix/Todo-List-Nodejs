@@ -52,7 +52,6 @@ spec:
 ---
 apiVersion: apps/v1
 kind: Deployment
-Replicas: 1
 metadata:
   name: todolist
   namespace: staging
