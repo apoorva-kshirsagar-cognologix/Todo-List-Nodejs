@@ -47,49 +47,83 @@ jobs:
           docker build -t $IMAGE .
           docker push $IMAGE
 
-      - name: Create PR (if not exists)
+      # Create PR if not exists
+      - name: Create PR
         id: create_pr
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GH_PAT }}
-        run: |
-          PR_URL=$(gh pr list --head ${{ github.ref_name }} --base main --json url --jq '.[0].url')
-          if [ -z "$PR_URL" ]; then
-            echo "Creating PR..."
-            gh pr create \
-              --base main \
-              --head ${{ github.ref_name }} \
-              --title "Feature: ${{ github.ref_name }}" \
-              --body "Auto-created PR for feature branch"
-          else
-            echo "PR already exists: $PR_URL"
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { repo, owner, ref } = context;
+            const branch = ref.replace("refs/heads/", "");
+            const prs = await github.rest.pulls.list({
+              owner,
+              repo,
+              head: `${owner}:${branch}`,
+              base: "main",
+              state: "open",
+            });
+            if (prs.data.length === 0) {
+              const pr = await github.rest.pulls.create({
+                owner,
+                repo,
+                base: "main",
+                head: branch,
+                title: `Feature: ${branch}`,
+                body: "Auto-created PR for feature branch"
+              });
+              core.setOutput("pr_number", pr.data.number);
+            } else {
+              core.setOutput("pr_number", prs.data[0].number);
+            }
 
-      - name: Approve or Comment on PR
-        with:
-          github-token: ${{ secrets.GH_PAT }}
+
+      #Approve PR (if tests passed)
+      - name: Approve PR
         if: success()
-        run: |
-          gh pr review ${{ github.ref_name }} --approve --body "✅ All checks passed!"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_PAT }}
+          script: |
+            const pr = core.getInput("pr_number") || "${{ steps.create_pr.outputs.pr_number }}";
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr,
+              event: "APPROVE",
+              body: "✅ All checks passed!"
+            });
 
+      #Comment if tests failed
       - name: Comment if tests failed
         if: failure()
-        run: |
-          gh pr comment ${{ github.ref_name }} --body "❌ Tests failed. Please fix before merging."
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Merge PR
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GH_PAT }}
+          script: |
+            const pr = core.getInput("pr_number") || "${{ steps.create_pr.outputs.pr_number }}";
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr,
+              body: "❌ Tests failed. Please fix before merging."
+            });
+
+      #Merge PR if all is well
+      - name: Merge PR
         if: success()
-        run: |
-          gh pr merge ${{ github.ref_name }} --merge --admin
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_PAT }}
+          script: |
+            const pr = "${{ steps.create_pr.outputs.pr_number }}";
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr,
+              merge_method: "merge"
+            });
+
           
       - name: Set up kubectl
         run: |
