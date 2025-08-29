@@ -85,12 +85,6 @@ jobs:
               core.setOutput("pr_number", prs.data[0].number);
             }
 
-      - name: Run Tests
-        runs-on: self-hosted
-        steps:
-          - name: Checkout Repo
-            uses: actions/checkout@v4
-
       #Approve PR (if tests passed)
       - name: Approve PR
         if: success()
