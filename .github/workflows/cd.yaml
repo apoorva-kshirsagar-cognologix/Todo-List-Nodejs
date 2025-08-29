@@ -49,6 +49,8 @@ jobs:
 
       - name: Create PR (if not exists)
         id: create_pr
+        with:
+          github-token: ${{ secrets.GH_PAT }}
         run: |
           PR_URL=$(gh pr list --head ${{ github.ref_name }} --base main --json url --jq '.[0].url')
           if [ -z "$PR_URL" ]; then
@@ -65,6 +67,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Approve or Comment on PR
+        with:
+          github-token: ${{ secrets.GH_PAT }}
         if: success()
         run: |
           gh pr review ${{ github.ref_name }} --approve --body "✅ All checks passed!"
@@ -79,6 +83,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Merge PR
+        with:
+          github-token: ${{ secrets.GH_PAT }}
         if: success()
         run: |
           gh pr merge ${{ github.ref_name }} --merge --admin
