@@ -53,36 +53,43 @@ jobs:
           echo "Repo: ${{ github.event.repository.name }}"
           echo "Branch: ${{ github.ref_name }}"
 
-      # Create PR if not exists
-      - name: Create PR
-        id: create_pr
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GH_PAT }}
-          script: |
-            const { repo, owner, ref } = context;
-            const branch = ref.replace("refs/heads/", "");
-            const prs = await github.rest.pulls.list({
+    - name: Create PR
+      id: create_pr
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GH_PAT }}
+        script: |
+          const owner = context.repo.owner;
+          const repo = context.repo.repo;
+          const branch = context.ref.replace("refs/heads/", "");
+
+          const prs = await github.rest.pulls.list({
+            owner,
+            repo,
+            head: `${owner}:${branch}`,
+            base: "main",
+            state: "open",
+          });
+
+          if (prs.data.length === 0) {
+            const pr = await github.rest.pulls.create({
               owner,
               repo,
-              head: `${owner}:${branch}`,
               base: "main",
-              state: "open",
+              head: branch,
+              title: `Feature: ${branch}`,
+              body: "Auto-created PR for feature branch"
             });
-            if (prs.data.length === 0) {
-              const pr = await github.rest.pulls.create({
-                owner,
-                repo,
-                base: "main",
-                head: branch,
-                title: `Feature: ${branch}`,
-                body: "Auto-created PR for feature branch"
-              });
-              core.setOutput("pr_number", pr.data.number);
-            } else {
-              core.setOutput("pr_number", prs.data[0].number);
-            }
+            core.setOutput("pr_number", pr.data.number);
+          } else {
+            core.setOutput("pr_number", prs.data[0].number);
+          }
 
+  - name: Run Tests
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
 
       #Approve PR (if tests passed)
       - name: Approve PR
