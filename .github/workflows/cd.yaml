@@ -47,6 +47,14 @@ jobs:
           docker build -t $IMAGE .
           docker push $IMAGE
 
+      - name: Debug Context
+        with:
+          github-token: ${{ secrets.GH_PAT }}
+        run: |
+          echo "Owner: ${{ github.repository_owner }}"
+          echo "Repo: ${{ github.event.repository.name }}"
+          echo "Branch: ${{ github.ref_name }}"
+
       # Create PR if not exists
       - name: Create PR
         id: create_pr
