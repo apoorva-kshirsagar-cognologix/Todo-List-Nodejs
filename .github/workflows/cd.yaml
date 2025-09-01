@@ -1,0 +1,150 @@
+name: CD
+# check cd flow for develop branch new
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature*'
+    tags:
+      - 'v*.*.*'
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Set Environment
+        id: set-env
+        run: |
+          if [[ "${GITHUB_REF}" == refs/heads/main ]]; then
+            echo "env=staging" >> $GITHUB_OUTPUT
+            echo "tag=staging-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+          elif [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "env=prod" >> $GITHUB_OUTPUT
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "env=dev" >> $GITHUB_OUTPUT
+            echo "tag=dev-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}          
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE=${{ secrets.DOCKER_USERNAME }}/todo:${{ steps.set-env.outputs.tag }}
+          echo "Building and pushing $IMAGE"
+          docker build -t $IMAGE .
+          docker push $IMAGE
+
+      - name: Debug Context for feature1 
+        run: |
+          echo "Owner: ${{ github.repository_owner }}"
+          echo "Repo: ${{ github.event.repository.name }}"
+          echo "Branch: ${{ github.ref_name }}"
+
+      - name: Create PR
+        id: create_pr
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.BOT_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const branch = context.ref.replace("refs/heads/", "");
+
+            const prs = await github.rest.pulls.list({
+              owner,
+              repo,
+              head: `${owner}:${branch}`,
+              base: "main",
+              state: "open",
+            });
+
+            if (prs.data.length === 0) {
+              const pr = await github.rest.pulls.create({
+                owner,
+                repo,
+                base: "main",
+                head: branch,
+                title: `Feature: ${branch}`,
+                body: "Auto-created PR for feature branch"
+              });
+              core.setOutput("pr_number", pr.data.number);
+            } else {
+              core.setOutput("pr_number", prs.data[0].number);
+            }
+
+      #Approve PR (if tests passed)
+      - name: Approve PR
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.BOT_TOKEN }}
+          script: |
+            const pr = core.getInput("pr_number") || "${{ steps.create_pr.outputs.pr_number }}";
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr,
+              event: "APPROVE",
+              body: "✅ All checks passed!"
+            });
+
+      #Comment if tests failed
+      - name: Comment if tests failed
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.BOT_TOKEN }}
+          script: |
+            const pr = core.getInput("pr_number") || "${{ steps.create_pr.outputs.pr_number }}";
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr,
+              body: "❌ Tests failed. Please fix before merging."
+            });
+
+      #Merge PR if all is well
+      - name: Merge PR
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.BOT_TOKEN }}
+          script: |
+            const pr = "${{ steps.create_pr.outputs.pr_number }}";
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr,
+              merge_method: "merge"
+            });
+
+          
+      - name: Set up kubectl
+        run: |
+          echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
+          kubectl cluster-info
+
+      - name: Update K8s Manifests with Image
+        run: |
+          IMAGE=${{ secrets.DOCKER_USERNAME }}/todo:${{ steps.set-env.outputs.tag }}
+          kubectl create namespace ${{ steps.set-env.outputs.env }} --dry-run=client -o yaml | kubectl apply -f -
+          for f in k8s/${{ steps.set-env.outputs.env }}/*.yaml; do
+            sed "s|todo:.*|$IMAGE|g" $f | kubectl apply -n ${{ steps.set-env.outputs.env }} -f -
+          done
+
+      - name: Deploy to K8s
+        run: |
+          kubectl rollout status deployment -n ${{ steps.set-env.outputs.env }} todolist
