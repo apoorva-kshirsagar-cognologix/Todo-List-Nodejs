@@ -3,7 +3,7 @@ name: CD
 on:
   push:
     branches:
-      - main
+      #- main
       - develop
       - 'feature*'
     tags:
@@ -63,6 +63,10 @@ jobs:
             const repo = context.repo.repo;
             const branch = context.ref.replace("refs/heads/", "");
 
+            if (branch === "main") {
+              core.info("Skipping PR creation for main branch.");
+              return;
+            }
             const prs = await github.rest.pulls.list({
               owner,
               repo,
