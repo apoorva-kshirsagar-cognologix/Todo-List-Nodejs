@@ -15,6 +15,8 @@ permissions:
 jobs:
   deploy:
     runs-on: self-hosted
+    outputs:
+      pr_number: ${{ steps.create_pr.outputs.pr_number }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -89,53 +91,59 @@ jobs:
               core.setOutput("pr_number", prs.data[0].number);
             }
 
-      #Approve PR (if tests passed)
-      - name: Approve PR
-        if: success()
+  approve-or-comment:
+    needs: build-and-test
+    runs-on: self-hosted
+    steps:
+      - name: Approve if tests passed
+        if: needs.build-and-test.result == 'success'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.BOT_TOKEN }}
           script: |
-            const pr = core.getInput("pr_number") || "${{ steps.create_pr.outputs.pr_number }}";
             await github.rest.pulls.createReview({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: pr,
+              pull_number: parseInt("${{ needs.build-and-test.outputs.pr_number }}"),
               event: "APPROVE",
-              body: "✅ All checks passed!"
+              body: "✅ Tests passed! Auto-approved by CI bot."
             });
 
-      #Comment if tests failed
       - name: Comment if tests failed
-        if: failure()
+        if: needs.build-and-test.result == 'failure'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.BOT_TOKEN }}
           script: |
-            const pr = core.getInput("pr_number") || "${{ steps.create_pr.outputs.pr_number }}";
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: pr,
-              body: "❌ Tests failed. Please fix before merging."
+              issue_number: parseInt("${{ needs.build-and-test.outputs.pr_number }}"),
+              body: "❌ Tests failed. Please check the pipeline logs and fix the issues."
             });
 
-      #Merge PR if all is well
+  merge-pr:
+    needs: approve-or-comment
+    runs-on: self-hosted
+    if: needs.build-and-test.result == 'success'
+    steps:
       - name: Merge PR
-        if: success()
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.BOT_TOKEN }}
           script: |
-            const pr = "${{ steps.create_pr.outputs.pr_number }}";
             await github.rest.pulls.merge({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: pr,
-              merge_method: "merge"
+              pull_number: parseInt("${{ needs.build-and-test.outputs.pr_number }}"),
+              merge_method: "squash"
             });
 
-          
+  deploy-to-k8s:   
+    needs: merge-pr
+    runs-on: self-hosted
+    if: needs.merge-pr.outputs.merged == 'true'
+    steps:     
       - name: Set up kubectl
         run: |
           echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
