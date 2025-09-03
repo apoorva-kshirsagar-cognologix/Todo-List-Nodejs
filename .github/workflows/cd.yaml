@@ -70,7 +70,7 @@ jobs:
               owner,
               repo,
               head: `${owner}:${branch}`,
-              base: "develop",
+              base: "main",
               state: "open",
             });
 
@@ -78,7 +78,7 @@ jobs:
               const pr = await github.rest.pulls.create({
                 owner,
                 repo,
-                base: "develop",
+                base: "main",
                 head: branch,
                 title: `Feature: ${branch}`,
                 body: "Auto-created PR for feature branch"
