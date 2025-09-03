@@ -92,7 +92,7 @@ jobs:
             }
 
   approve-or-comment:
-    needs: build-and-test
+    needs: deploy
     runs-on: self-hosted
     steps:
       - name: Approve if tests passed
