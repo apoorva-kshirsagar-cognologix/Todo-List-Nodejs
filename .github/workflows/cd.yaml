@@ -137,8 +137,8 @@ jobs:
               merge_method: "squash"
             });
             core.setOutput("merged", result.data.merged);
-      outputs:
-        merged: ${{ steps.merge.outputs.merged }}
+    outputs:
+      merged: ${{ steps.merge.outputs.merged }}
 
   deploy-to-k8s:   
     needs: [merge-pr, deploy]
