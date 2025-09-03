@@ -135,7 +135,7 @@ jobs:
             await github.rest.pulls.merge({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: parseInt("${{ needs.build-and-test.outputs.pr_number }}"),
+              pull_number: parseInt("${{ needs.deploy.outputs.pr_number }}"),
               merge_method: "squash"
             });
 
