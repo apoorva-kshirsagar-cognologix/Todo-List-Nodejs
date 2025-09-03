@@ -52,17 +52,11 @@ jobs:
           docker build -t $IMAGE .
           docker push $IMAGE
 
-      # - name: Debug Context for feature1 
-      #   run: |
-      #     echo "Owner: ${{ github.repository_owner }}"
-      #     echo "Repo: ${{ github.event.repository.name }}"
-      #     echo "Branch: ${{ github.ref_name }}"
-
       - name: Create PR
         id: create_pr
         uses: actions/github-script@v7
-        # with:
-        #   github-token: ${{ secrets.GH_PAT }}
+        with:
+          github-token: ${{ secrets.GH_PAT }}
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
