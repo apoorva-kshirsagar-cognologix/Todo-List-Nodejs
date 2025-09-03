@@ -1,12 +1,8 @@
 name: CD
 # check cd flow for feature branch new
 on:
-  pull_request:
-    branches:
-      - main
   push:
     branches:
-      #- main
       - develop
       - 'feature*'
     tags:
