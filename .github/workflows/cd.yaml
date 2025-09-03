@@ -52,11 +52,11 @@ jobs:
           docker build -t $IMAGE .
           docker push $IMAGE
 
-      - name: Debug Context for feature1 
-        run: |
-          echo "Owner: ${{ github.repository_owner }}"
-          echo "Repo: ${{ github.event.repository.name }}"
-          echo "Branch: ${{ github.ref_name }}"
+      # - name: Debug Context for feature1 
+      #   run: |
+      #     echo "Owner: ${{ github.repository_owner }}"
+      #     echo "Repo: ${{ github.event.repository.name }}"
+      #     echo "Branch: ${{ github.ref_name }}"
 
       - name: Create PR
         id: create_pr
