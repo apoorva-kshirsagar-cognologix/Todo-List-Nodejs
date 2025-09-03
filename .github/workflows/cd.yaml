@@ -121,6 +121,7 @@ jobs:
     if: needs.deploy.result == 'success'
     steps:
       - name: Merge PR
+        id: merge
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.BOT_TOKEN }} 
