@@ -143,9 +143,9 @@ jobs:
             });
 
   deploy-to-k8s:   
-    needs: merge-pr
+    needs: [merge-pr, deploy]
     runs-on: self-hosted
-    if: needs.merge-pr.outputs.merged == 'true'
+    if: needs.merge-pr.outputs.merged == 'true' && needs.deploy.result == 'success'
     steps:     
       - name: Set up kubectl
         run: |
