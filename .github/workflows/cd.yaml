@@ -125,7 +125,7 @@ jobs:
   merge-pr:
     needs: approve-or-comment
     runs-on: self-hosted
-    if: needs.build-and-test.result == 'success'
+    if: needs.deploy.result == 'success'
     steps:
       - name: Merge PR
         uses: actions/github-script@v7
