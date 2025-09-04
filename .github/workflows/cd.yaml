@@ -56,6 +56,24 @@ jobs:
               core.setOutput("pr_number", prs.data[0].number);
             }
 
+  code-review:
+    needs: deploy
+    runs-on: self-hosted
+    steps:
+      - name: Checkout PR Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: AI Review with CodeRabbit
+        uses: coderabbitai/ai-pr-reviewer@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+        with:
+          debug: false
+          review_simple_changes: false
+          review_comment_lgtm: false
+
   approve-or-comment:
     needs: deploy
     runs-on: self-hosted
