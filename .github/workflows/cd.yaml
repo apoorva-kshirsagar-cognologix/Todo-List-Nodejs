@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   deploy:
+    if: startsWith(github.ref, 'refs/heads/')
     runs-on: self-hosted
     outputs:
       pr_number: ${{ steps.create_pr.outputs.pr_number }}
@@ -64,6 +65,7 @@ jobs:
 
   code-review:
     needs: deploy
+    if: startsWith(github.ref, 'refs/heads/')
     runs-on: self-hosted
     steps:
       - name: Checkout PR Code
@@ -82,6 +84,7 @@ jobs:
 
   approve-or-comment:
     needs: deploy
+    if: startsWith(github.ref, 'refs/heads/')
     runs-on: self-hosted
     steps:
       - name: Approve if tests passed
@@ -113,6 +116,7 @@ jobs:
 
   merge-pr:
     needs: deploy
+    if: startsWith(github.ref, 'refs/heads/')
     runs-on: self-hosted
     if: needs.deploy.result == 'success'
     steps:
