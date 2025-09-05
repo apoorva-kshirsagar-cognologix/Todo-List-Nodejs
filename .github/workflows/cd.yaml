@@ -29,6 +29,7 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const branch = context.ref.replace("refs/heads/", "");
+            const ref = context.ref;
             // Handle only branch refs
             if (!ref.startsWith("refs/heads/")) {
               core.info(`Skipping PR creation because ref is not a branch: ${ref}`);
