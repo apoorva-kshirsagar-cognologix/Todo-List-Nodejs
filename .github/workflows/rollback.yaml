@@ -1,0 +1,35 @@
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to rollback to (e.g., v1.2.2)"
+        required: true
+      env:
+        description: "Environment (prod/staging/dev)"
+        required: true
+        default: "prod"
+
+jobs:
+  rollback:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Set Rollback Image
+        run: |
+          IMAGE=${{ secrets.DOCKER_USERNAME }}/todo:${{ github.event.inputs.tag }}
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+
+      - name: Update K8s with Previous Tag
+        run: |
+          kubectl create namespace ${{ github.event.inputs.env }} --dry-run=client -o yaml | kubectl apply -f -
+          for f in k8s/${{ github.event.inputs.env }}/*.yaml; do
+            sed "s|todo:.*|$IMAGE|g" $f | kubectl apply -n ${{ github.event.inputs.env }} -f -
+          done
+
+      - name: Verify Rollout
+        run: |
+          kubectl rollout status deployment -n ${{ github.event.inputs.env }} todolist
