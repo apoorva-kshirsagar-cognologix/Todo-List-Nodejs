@@ -140,7 +140,14 @@ jobs:
   deploy-to-k8s:   
     needs: [merge-pr, deploy]
     runs-on: self-hosted
-    if: needs.merge-pr.outputs.merged == 'true' && needs.deploy.result == 'success'
+    #if: needs.merge-pr.outputs.merged == 'true' && needs.deploy.result == 'success'
+    
+
+    if: |
+      (github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v')) ||
+      (needs.merge-pr.outputs.merged == 'true' && needs.deploy.result == 'success')
+
+
     steps:     
       - name: Checkout Repo
         uses: actions/checkout@v4
