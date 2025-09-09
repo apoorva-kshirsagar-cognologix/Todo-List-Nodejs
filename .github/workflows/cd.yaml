@@ -30,6 +30,9 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
+            const title = branch.startsWith("hotfix") 
+            ? `Hotfix: ${branch}` 
+            : `Feature: ${branch}`;
             const branch = context.ref.replace("refs/heads/", "");
             const ref = context.ref;
             // Handle only branch refs
@@ -200,7 +203,7 @@ jobs:
 
   deploy-prod:
     runs-on: self-hosted
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
