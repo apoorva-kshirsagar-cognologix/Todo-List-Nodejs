@@ -30,9 +30,6 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const title = branch.startsWith("hotfix") 
-            ? `Hotfix: ${branch}` 
-            : `Feature: ${branch}`;
             const branch = context.ref.replace("refs/heads/", "");
             const ref = context.ref;
             // Handle only branch refs
@@ -68,8 +65,8 @@ jobs:
                 repo,
                 base: "main",
                 head: branch,
-                title: `Feature: ${branch}`,
-                body: "Auto-created PR for feature branch"
+                title: title,
+                body: "Auto-created PR for feature/hotfix branch"
               });
               core.setOutput("pr_number", pr.data.number);
             } else {
