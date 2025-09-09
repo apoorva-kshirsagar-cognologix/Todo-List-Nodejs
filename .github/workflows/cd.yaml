@@ -65,8 +65,8 @@ jobs:
                 repo,
                 base: "main",
                 head: branch,
-                title: `Feature: ${branch}`,
-                body: "Auto-created PR for feature branch"
+                title: title,
+                body: "Auto-created PR for feature/hotfix branch"
               });
               core.setOutput("pr_number", pr.data.number);
             } else {
@@ -200,7 +200,7 @@ jobs:
 
   deploy-prod:
     runs-on: self-hosted
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
