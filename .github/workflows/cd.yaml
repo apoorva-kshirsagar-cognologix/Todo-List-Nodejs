@@ -5,6 +5,7 @@ on:
     branches:
       - develop
       - 'feature*'
+      - 'hotfix*'
     tags:
       - 'v*.*.*'
 permissions:
@@ -41,6 +42,15 @@ jobs:
               core.info("Skipping PR creation for main branch.");
               return;
             }
+
+
+            // For hotfix → base PR against main (urgent fix)
+            let baseBranch = "main";
+            let title = branch.startsWith("hotfix") 
+              ? `Hotfix: ${branch}` 
+              : `Feature: ${branch}`;
+
+
             const prs = await github.rest.pulls.list({
               owner,
               repo,
