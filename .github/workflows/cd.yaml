@@ -5,7 +5,10 @@ on:
     branches:
       - develop
       - 'feature*'
+      - 'feature/**'
       - 'hotfix*'
+      - 'hotfix/**'
+
     tags:
       - 'v*.*.*'
 permissions:
