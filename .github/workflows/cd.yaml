@@ -1,5 +1,5 @@
 name: CD
-# check cd flow for feature1 branch new
+# check cd flow for feature2 branch new
 on:
   push:
     branches:
