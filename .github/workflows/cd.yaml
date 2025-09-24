@@ -1,13 +1,14 @@
 name: CD
-# check cd flow for hotfix branch 2.0
+# check cd flow for hotfix branch 4.0
 
 on:
   push:
     branches:
-      - develop
-      - 'feature*'
+      - main
+      # - develop
+      # - 'feature*'
       - 'feature/**'
-      - 'hotfix*'
+      # - 'hotfix*'
       - 'hotfix/**'
     tags:
       - 'v*.*.*'
@@ -16,188 +17,73 @@ permissions:
   pull-requests: write
 
 jobs:
-  # deploy:
-  #   if: startsWith(github.ref, 'refs/heads/')
-  #   runs-on: self-hosted
-  #   outputs:
-  #     pr_number: ${{ steps.create_pr.outputs.pr_number }}
-  #   steps:
-  #     - name: Checkout Repo
-  #       uses: actions/checkout@v4
-        
-  #     - name: Create PR
-  #       id: create_pr
-  #       uses: actions/github-script@v7
-  #       with:
-  #         github-token: ${{ secrets.GH_PAT }}
-  #         script: |
-  #           const owner = context.repo.owner;
-  #           const repo = context.repo.repo;
-  #           const branch = context.ref.replace("refs/heads/", "");
-  #           const ref = context.ref;
-  #           // Handle only branch refs
-  #           if (!ref.startsWith("refs/heads/")) {
-  #             core.info(`Skipping PR creation because ref is not a branch: ${ref}`);
-  #             return;
-  #           }
-
-  #           if (branch === "main") {
-  #             core.info("Skipping PR creation for main branch.");
-  #             return;
-  #           }
-
-
-  #           // For hotfix → base PR against main (urgent fix)
-  #           let baseBranch = "main";
-  #           let title = branch.startsWith("hotfix") 
-  #             ? `Hotfix: ${branch}` 
-  #             : `Feature: ${branch}`;
-
-
-  #           const prs = await github.rest.pulls.list({
-  #             owner,
-  #             repo,
-  #             head: `${owner}:${branch}`,
-  #             base: "main",
-  #             state: "open",
-  #           });
-
-  #           if (prs.data.length === 0) {
-  #             const pr = await github.rest.pulls.create({
-  #               owner,
-  #               repo,
-  #               base: "main",
-  #               head: branch,
-  #               title: title,
-  #               body: "Auto-created PR for feature/hotfix branch"
-  #             });
-  #             core.setOutput("pr_number", pr.data.number);
-  #           } else {
-  #             core.setOutput("pr_number", prs.data[0].number);
-  #           }
-
-  # code-review:
-  #   needs: deploy
-  #   if: startsWith(github.ref, 'refs/heads/')
-  #   runs-on: self-hosted
-  #   steps:
-  #     - name: Checkout PR Code
-  #       uses: actions/checkout@v4
-  #       with:
-  #         ref: ${{ github.event.pull_request.head.sha }}
-
-  #     - name: AI Review with CodeRabbit
-  #       uses: coderabbitai/ai-pr-reviewer@latest
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-  #       with:
-  #         debug: false
-  #         review_simple_changes: false
-  #         review_comment_lgtm: false
-
-  # approve-or-comment:
-  #   needs: deploy
-  #   if: startsWith(github.ref, 'refs/heads/')
-  #   runs-on: self-hosted
-  #   steps:
-  #     - name: Approve if tests passed
-  #       if: needs.deploy.result == 'success'
-  #       uses: actions/github-script@v7
-  #       with:
-  #         github-token: ${{ secrets.BOT_TOKEN }}
-  #         script: |
-  #           await github.rest.pulls.createReview({
-  #             owner: context.repo.owner,
-  #             repo: context.repo.repo,
-  #             pull_number: parseInt("${{ needs.deploy.outputs.pr_number }}"),
-  #             event: "APPROVE",
-  #             body: "✅ Tests passed! Auto-approved by CI bot."
-  #           });
-
-  #     - name: Comment if tests failed
-  #       if: needs.deploy.result == 'failure'
-  #       uses: actions/github-script@v7
-  #       with:
-  #         github-token: ${{ secrets.BOT_TOKEN }}
-  #         script: |
-  #           await github.rest.issues.createComment({
-  #             owner: context.repo.owner,
-  #             repo: context.repo.repo,
-  #             issue_number: parseInt("${{ needs.deploy.outputs.pr_number }}"),
-  #             body: "❌ Tests failed. Please check the pipeline logs and fix the issues."
-  #           });
-
-  # merge-pr:
-  #   needs: deploy
-  #   if: startsWith(github.ref, 'refs/heads/')
-  #   runs-on: self-hosted
-  #   steps:
-  #     - name: Merge PR
-  #       if: needs.deploy.result == 'success'
-  #       id: merge
-  #       uses: actions/github-script@v7
-  #       with:
-  #         github-token: ${{ secrets.BOT_TOKEN }} 
-  #         script: |
-  #           const prNumber = Number("${{ needs.deploy.outputs.pr_number }}");
-  #           const result = await github.rest.pulls.merge({
-  #             owner: context.repo.owner,
-  #             repo: context.repo.repo,
-  #             pull_number: prNumber,
-  #             merge_method: "squash"
-  #           });
-  #           core.setOutput("merged", result.data.merged);
-  #   outputs:
-  #     merged: ${{ steps.merge.outputs.merged }}
-
-  deploy-to-k8s:   
+  deploy-dev:
     runs-on: self-hosted
-    steps:     
+    if: startsWith(github.ref, 'refs/heads/hotfix') || startsWith(github.ref, 'refs/heads/feature')
+    steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
 
       - name: Set Environment
         id: set-env
         run: |
-          if [[ "${GITHUB_REF}" == refs/heads/main ]]; then
-            echo "env=staging" >> $GITHUB_OUTPUT
-            echo "tag=staging-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
-          else
-            echo "env=dev" >> $GITHUB_OUTPUT
-            echo "tag=dev-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
-          fi
-        shell: bash
+          echo "env=dev" >> $GITHUB_OUTPUT
+          echo "tag=dev-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
       - name: Log in to DockerHub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}          
+          username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and Push Docker Image
         run: |
           IMAGE=${{ secrets.DOCKER_USERNAME }}/todo:${{ steps.set-env.outputs.tag }}
-          echo "Building and pushing $IMAGE"
           docker build -t $IMAGE .
           docker push $IMAGE
 
-      - name: Set up kubectl
-        run: |
-          echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
-          kubectl cluster-info
-
-      - name: Update K8s Manifests with Image
+      - name: Deploy to Dev K8s
         run: |
           IMAGE=${{ secrets.DOCKER_USERNAME }}/todo:${{ steps.set-env.outputs.tag }}
-          kubectl create namespace ${{ steps.set-env.outputs.env }} --dry-run=client -o yaml | kubectl apply -f -
-          for f in k8s/${{ steps.set-env.outputs.env }}/*.yaml; do
-            sed "s|todo:.*|$IMAGE|g" $f | kubectl apply -n ${{ steps.set-env.outputs.env }} -f -
+          kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
+          for f in k8s/dev/*.yaml; do
+            sed "s|todo:.*|$IMAGE|g" $f | kubectl apply -n dev -f -
           done
+          kubectl rollout status deployment -n dev todolist
 
-      - name: Deploy to K8s
+  deploy-staging:
+    runs-on: self-hosted
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Set Environment
+        id: set-env
         run: |
-          kubectl rollout status deployment -n ${{ steps.set-env.outputs.env }} todolist
+          echo "env=staging" >> $GITHUB_OUTPUT
+          echo "tag=staging-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE=${{ secrets.DOCKER_USERNAME }}/todo:${{ steps.set-env.outputs.tag }}
+          docker build -t $IMAGE .
+          docker push $IMAGE
+
+      - name: Deploy to Staging K8s
+        run: |
+          IMAGE=${{ secrets.DOCKER_USERNAME }}/todo:${{ steps.set-env.outputs.tag }}
+          kubectl create namespace staging --dry-run=client -o yaml | kubectl apply -f -
+          for f in k8s/staging/*.yaml; do
+            sed "s|todo:.*|$IMAGE|g" $f | kubectl apply -n staging -f -
+          done
+          kubectl rollout status deployment -n staging todolist
   deploy-prod:
     runs-on: self-hosted
     if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
