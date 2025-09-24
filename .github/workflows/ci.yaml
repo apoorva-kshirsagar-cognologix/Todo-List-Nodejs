@@ -3,17 +3,12 @@ on:
   push:
     branches:
       - main
-      - develop
-      - 'feature*'
-      - 'feat/**'
-      - 'fix/**'
-      - 'release/**'
+      - 'feature/**'
       - 'hotfix/**'
 
   pull_request:
     branches:
       - main
-      - develop
 
 jobs:
   build-test-push:
