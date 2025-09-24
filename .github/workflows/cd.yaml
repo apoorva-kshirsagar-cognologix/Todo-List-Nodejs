@@ -1,11 +1,10 @@
 name: CD
-# check cd flow for hotfix branch 4.0
+# check cd flow hotfix branch 4.0
 
 on:
   push:
     branches:
       - main
-      # - develop
       # - 'feature*'
       - 'feature/**'
       # - 'hotfix*'
