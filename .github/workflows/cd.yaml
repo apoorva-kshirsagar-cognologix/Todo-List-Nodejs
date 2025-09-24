@@ -1,5 +1,5 @@
 name: CD
-# lets check cd flow hotfix branch 4.0
+# lets check cd flow for feature/new branch
 
 on:
   push:
